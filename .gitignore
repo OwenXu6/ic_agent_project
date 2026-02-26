@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Simulation artifacts
+*.vcd
+*.lxt
+*.fst
+results/*.sim
+
+# Innovus work directories
+innovus_work/
+*.dbs/
+*.enc.dat/
+*.enc/
+
+# Sensitive config (never commit credentials)
+.env
+config_local.py
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+*.swp
