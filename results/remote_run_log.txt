@@ -1,0 +1,71 @@
+================================================================================
+IC Agent — Remote Server Exploration Log
+Date: 2026-02-26
+Server: ieng6.ucsd.edu (connected to ieng6-201.ucsd.edu)
+================================================================================
+
+── STEP 1: Remote directory creation ──────────────────────────────────────────
+Status: SUCCESS
+Created:
+  ~/ic_agent/designs/
+  ~/ic_agent/scripts/
+  ~/ic_agent/results/
+Actual home directory: /home/linux/ieng6/students/158/wex019
+  (NOT /home/linux/ieng6/wex019 — config.py updated accordingly)
+
+── STEP 2-5: File uploads ─────────────────────────────────────────────────────
+Status: SUCCESS (all 4 files uploaded)
+  designs/full_adder.v             → ~/ic_agent/designs/full_adder.v
+  designs/ripple_carry_adder_4bit.v → ~/ic_agent/designs/ripple_carry_adder_4bit.v
+  scripts/innovus_pnr.tcl          → ~/ic_agent/scripts/innovus_pnr.tcl
+  scripts/constraints.sdc          → ~/ic_agent/scripts/constraints.sdc
+
+── STEP 6: EDA tool availability investigation ────────────────────────────────
+
+FINDING: ieng6 login nodes do NOT have EDA tools mounted.
+
+The module system (ACMS) is at /public/Modules and defines:
+  - cadence-innovus1520, cadence-innovus191, cadence-innovus19.17, cadence-innovus211
+  - cadence-xcelium2009
+  - design-compiler-2015.06-64
+  - hspice-2021.09
+
+These module files point binaries to /software/ECE/ (e.g. /software/ECE/Cadence-INNOVUS211/bin)
+but /software/ECE/ is empty on ieng6-201 — it is an NFS mount available only on
+dedicated EDA nodes, not the general login nodes.
+
+PDK found at (readable):
+  /home/linux/ieng6/ECE260B_WI26_A00/public/PDKdata/
+    db/    — Synopsys .db liberty files (tcbn65gpluswc.db etc.)
+    lef/   — LEF technology files
+    lib/   — Liberty timing libs
+    verilog/ — Standard cell Verilog models
+
+── STEP 7: How to run Innovus on ieng6 ───────────────────────────────────────
+
+Option A — Interactive session (recommended for testing):
+  1. SSH to ieng6 normally
+  2. Run: prep -l ECE260B_WI26_A00   (loads all tools including Innovus)
+  3. Run: innovus -batch -source ~/ic_agent/scripts/innovus_pnr.tcl
+
+Option B — Batch job (for automated runs):
+  Use the ieng6 job scheduler or dedicated EDA nodes.
+  The course likely provides a way to submit batch Innovus jobs.
+
+Option C — EDA-specific node:
+  UCSD sometimes has dedicated EDA login nodes (e.g. ece-linux.ucsd.edu).
+  Check with the ECE260B course staff for the correct node.
+
+NOTE: The `prep` command sources ACMS_MODULES and sets up the full EDA environment.
+This cannot be done via non-interactive SSH exec_command (used by this agent)
+because `prep` relies on interactive shell initialization.
+
+── NEXT STEPS ─────────────────────────────────────────────────────────────────
+1. Log in to ieng6 interactively: ssh wex019@ieng6.ucsd.edu
+2. Run: prep -l ECE260B_WI26_A00
+3. cd ~/ic_agent && innovus -batch -source scripts/innovus_pnr.tcl
+4. The agent can then download results via download_from_remote()
+
+Alternatively, ask the course TA for the correct Innovus submission method.
+
+================================================================================
