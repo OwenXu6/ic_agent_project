@@ -19,6 +19,7 @@ innovus_work/
 
 # Sensitive config (never commit credentials)
 .env
+config.py
 config_local.py
 
 # OS

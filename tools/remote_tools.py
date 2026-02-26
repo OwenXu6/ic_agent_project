@@ -110,15 +110,28 @@ def _get_ssh_client():
     except ImportError:
         raise RuntimeError("paramiko not installed. Run: pip install paramiko")
 
-    key_path = os.path.expanduser(getattr(config, "REMOTE_KEY", "~/.ssh/id_rsa"))
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    ssh.connect(
-        hostname=config.REMOTE_HOST,
-        username=config.REMOTE_USER,
-        key_filename=key_path,
-        timeout=30
-    )
+
+    key_path = getattr(config, "REMOTE_KEY", "")
+    password = getattr(config, "REMOTE_PASSWORD", "")
+
+    if key_path:
+        # SSH key authentication
+        ssh.connect(
+            hostname=config.REMOTE_HOST,
+            username=config.REMOTE_USER,
+            key_filename=os.path.expanduser(key_path),
+            timeout=30
+        )
+    else:
+        # Password authentication (e.g. UCSD ieng6)
+        ssh.connect(
+            hostname=config.REMOTE_HOST,
+            username=config.REMOTE_USER,
+            password=password,
+            timeout=30
+        )
     return ssh
 
 
