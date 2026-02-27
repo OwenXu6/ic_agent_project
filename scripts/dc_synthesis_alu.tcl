@@ -1,21 +1,16 @@
 # ==============================================================================
 # Design Compiler Synthesis Script
-# Design: ripple_carry_adder_4bit
+# Design: alu_8bit
 # Technology: TSMC 65nm GP (tcbn65gplus) — ECE260B PDK
 # ==============================================================================
 
 # ------------------------------------------------------------------------------
 # Step 0: Setup
 # ------------------------------------------------------------------------------
-set DESIGN_NAME "ripple_carry_adder_4bit"
-
-set RTL_FILES {
-    designs/full_adder.v
-    designs/ripple_carry_adder_4bit.v
-}
-
-set SDC_FILE   "scripts/constraints.sdc"
-set OUTPUT_DIR "results/synth"
+set DESIGN_NAME "alu_8bit"
+set RTL_FILES   { designs/alu_8bit.v }
+set SDC_FILE    "scripts/constraints_alu.sdc"
+set OUTPUT_DIR  "results/synth_alu"
 
 set PDK_DIR "/home/linux/ieng6/ECE260B_WI26_A00/public/PDKdata/db"
 
@@ -59,7 +54,7 @@ foreach f $RTL_FILES {
 elaborate $DESIGN_NAME
 
 # ------------------------------------------------------------------------------
-# Step 3: Design check and linking
+# Step 3: Link and check
 # ------------------------------------------------------------------------------
 puts "========================================"
 puts "  Step 3: Linking and checking design"
@@ -82,7 +77,6 @@ puts "========================================"
 source $SDC_FILE
 puts "Applied constraints from $SDC_FILE"
 
-# Max fanout and transition
 set_max_fanout     8   [current_design]
 set_max_transition 0.5 [current_design]
 
@@ -123,8 +117,8 @@ write -format verilog -hierarchy \
     -output designs/${DESIGN_NAME}_synth.v
 puts "Gate-level netlist: designs/${DESIGN_NAME}_synth.v"
 
-write_sdc -nosplit scripts/constraints_synth.sdc
-puts "Updated SDC: scripts/constraints_synth.sdc"
+write_sdc -nosplit scripts/constraints_alu_synth.sdc
+puts "Updated SDC: scripts/constraints_alu_synth.sdc"
 
 puts "========================================"
 puts "  SYNTHESIS COMPLETE — check ${OUTPUT_DIR}/ for reports"

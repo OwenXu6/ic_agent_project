@@ -1,0 +1,53 @@
+ 
+****************************************
+Report : power
+        -analysis_effort low
+Design : alu_8bit
+Version: K-2015.06-SP2
+Date   : Fri Feb 27 13:57:09 2026
+****************************************
+
+
+Library(s) Used:
+
+    tcbn65gplushvtwc (File: /home/linux/ieng6/ECE260B_WI26_A00/public/PDKdata/db/tcbn65gplushvtwc.db)
+
+
+Operating Conditions: WCCOM   Library: tcbn65gpluslvtwc
+Wire Load Model Mode: segmented
+
+Design        Wire Load Model            Library
+------------------------------------------------
+alu_8bit               ZeroWireload      tcbn65gpluslvtwc
+
+
+Global Operating Voltage = 0.9  
+Power-specific unit information :
+    Voltage Units = 1V
+    Capacitance Units = 1.000000pf
+    Time Units = 1ns
+    Dynamic Power Units = 1mW    (derived from V,C,T units)
+    Leakage Power Units = 1nW
+
+
+  Cell Internal Power  =  16.9337 uW   (71%)
+  Net Switching Power  =   6.9054 uW   (29%)
+                         ---------
+Total Dynamic Power    =  23.8392 uW  (100%)
+
+Cell Leakage Power     = 598.5566 nW
+
+
+                 Internal         Switching           Leakage            Total
+Power Group      Power            Power               Power              Power   (   %    )  Attrs
+--------------------------------------------------------------------------------------------------
+io_pad             0.0000            0.0000            0.0000            0.0000  (   0.00%)
+memory             0.0000            0.0000            0.0000            0.0000  (   0.00%)
+black_box          0.0000            0.0000            0.0000            0.0000  (   0.00%)
+clock_network      0.0000            0.0000            0.0000            0.0000  (   0.00%)
+register       1.4255e-02        4.6489e-03          240.8677        1.9145e-02  (  78.34%)
+sequential         0.0000            0.0000            0.0000            0.0000  (   0.00%)
+combinational  2.6788e-03        2.2565e-03          357.6889        5.2930e-03  (  21.66%)
+--------------------------------------------------------------------------------------------------
+Total          1.6934e-02 mW     6.9054e-03 mW       598.5566 nW     2.4438e-02 mW
+1

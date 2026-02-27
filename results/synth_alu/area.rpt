@@ -1,0 +1,43 @@
+ 
+****************************************
+Report : area
+Design : alu_8bit
+Version: K-2015.06-SP2
+Date   : Fri Feb 27 13:57:09 2026
+****************************************
+
+Library(s) Used:
+
+    tcbn65gplushvtwc (File: /home/linux/ieng6/ECE260B_WI26_A00/public/PDKdata/db/tcbn65gplushvtwc.db)
+
+Number of ports:                           31
+Number of nets:                           161
+Number of cells:                          140
+Number of combinational cells:            130
+Number of sequential cells:                10
+Number of macros/black boxes:               0
+Number of buf/inv:                         25
+Number of references:                      25
+
+Combinational area:                258.840006
+Buf/Inv area:                       27.000001
+Noncombinational area:              72.719998
+Macro/Black Box area:                0.000000
+Net Interconnect area:      undefined  (Wire load has zero net area)
+
+Total cell area:                   331.560005
+Total area:                 undefined
+
+Hierarchical area distribution
+------------------------------
+
+                                  Global cell area          Local cell area
+                                  ------------------  --------------------------- 
+Hierarchical cell                 Absolute   Percent  Combi-    Noncombi-  Black-
+                                  Total      Total    national  national   boxes   Design
+--------------------------------  ---------  -------  --------  ---------  ------  ---------
+alu_8bit                           331.5600    100.0  258.8400    72.7200  0.0000  alu_8bit
+--------------------------------  ---------  -------  --------  ---------  ------  ---------
+Total                                                 258.8400    72.7200  0.0000
+
+1

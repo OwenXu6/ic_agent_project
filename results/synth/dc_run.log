@@ -1,0 +1,502 @@
+                                        
+                           Design Compiler Graphical 
+                                 DC Ultra (TM)
+                                  DFTMAX (TM)
+                              Power Compiler (TM)
+                                 DesignWare (R)
+                                 DC Expert (TM)
+                               Design Vision (TM)
+                               HDL Compiler (TM)
+                               VHDL Compiler (TM)
+                                  DFT Compiler
+                               Design Compiler(R)
+                                        
+               Version K-2015.06-SP2 for linux64 - Aug 31, 2015 
+                                        
+                    Copyright (c) 1988 - 2015 Synopsys, Inc.
+   This software and the associated documentation are proprietary to Synopsys,
+ Inc. This software may only be used in accordance with the terms and conditions
+ of a written license agreement with Synopsys, Inc. All other use, reproduction,
+            or distribution of this software is strictly prohibited.
+Initializing...
+# ==============================================================================
+# Design Compiler Synthesis Script
+# Design: ripple_carry_adder_4bit
+# Technology: TSMC 65nm GP (tcbn65gplus) — ECE260B PDK
+# ==============================================================================
+# ------------------------------------------------------------------------------
+# Step 0: Setup
+# ------------------------------------------------------------------------------
+set DESIGN_NAME "ripple_carry_adder_4bit"
+ripple_carry_adder_4bit
+set RTL_FILES {
+    designs/full_adder.v
+    designs/ripple_carry_adder_4bit.v
+}
+
+    designs/full_adder.v
+    designs/ripple_carry_adder_4bit.v
+
+set SDC_FILE   "scripts/constraints.sdc"
+scripts/constraints.sdc
+set OUTPUT_DIR "results/synth"
+results/synth
+set PDK_DIR "/home/linux/ieng6/ECE260B_WI26_A00/public/PDKdata/db"
+/home/linux/ieng6/ECE260B_WI26_A00/public/PDKdata/db
+# ------------------------------------------------------------------------------
+# Step 1: Configure technology libraries
+# ------------------------------------------------------------------------------
+puts "========================================"
+========================================
+puts "  Step 1: Setting up libraries"
+  Step 1: Setting up libraries
+puts "========================================"
+========================================
+set wc_libs [glob -nocomplain ${PDK_DIR}/*wc*.db]
+/home/linux/ieng6/ECE260B_WI26_A00/public/PDKdata/db/tcbn65gpluslvtwc.db /home/linux/ieng6/ECE260B_WI26_A00/public/PDKdata/db/tcbn65gpluswc.db /home/linux/ieng6/ECE260B_WI26_A00/public/PDKdata/db/tcbn65gplushvtwc.db
+if {[llength $wc_libs] == 0} {
+    puts "WARNING: No worst-case .db files found; falling back to all .db files"
+    set wc_libs [glob -nocomplain ${PDK_DIR}/*.db]
+}
+if {[llength $wc_libs] == 0} {
+    puts "ERROR: No .db library files found in ${PDK_DIR}"
+    exit 1
+}
+set target_library $wc_libs
+/home/linux/ieng6/ECE260B_WI26_A00/public/PDKdata/db/tcbn65gpluslvtwc.db /home/linux/ieng6/ECE260B_WI26_A00/public/PDKdata/db/tcbn65gpluswc.db /home/linux/ieng6/ECE260B_WI26_A00/public/PDKdata/db/tcbn65gplushvtwc.db
+set link_library   [concat * $target_library]
+* /home/linux/ieng6/ECE260B_WI26_A00/public/PDKdata/db/tcbn65gpluslvtwc.db /home/linux/ieng6/ECE260B_WI26_A00/public/PDKdata/db/tcbn65gpluswc.db /home/linux/ieng6/ECE260B_WI26_A00/public/PDKdata/db/tcbn65gplushvtwc.db
+puts "Using libraries: $wc_libs"
+Using libraries: /home/linux/ieng6/ECE260B_WI26_A00/public/PDKdata/db/tcbn65gpluslvtwc.db /home/linux/ieng6/ECE260B_WI26_A00/public/PDKdata/db/tcbn65gpluswc.db /home/linux/ieng6/ECE260B_WI26_A00/public/PDKdata/db/tcbn65gplushvtwc.db
+file mkdir $OUTPUT_DIR
+# ------------------------------------------------------------------------------
+# Step 2: Read RTL
+# ------------------------------------------------------------------------------
+puts "========================================"
+========================================
+puts "  Step 2: Reading RTL"
+  Step 2: Reading RTL
+puts "========================================"
+========================================
+foreach f $RTL_FILES {
+    if {![file exists $f]} {
+        puts "ERROR: RTL file not found: $f"
+        exit 1
+    }
+    analyze -library work -format verilog $f
+}
+Running PRESTO HDLC
+Compiling source file ./designs/full_adder.v
+Presto compilation completed successfully.
+Loading db file '/home/linux/ieng6/ECE260B_WI26_A00/public/PDKdata/db/tcbn65gpluslvtwc.db'
+Loading db file '/home/linux/ieng6/ECE260B_WI26_A00/public/PDKdata/db/tcbn65gpluswc.db'
+Loading db file '/home/linux/ieng6/ECE260B_WI26_A00/public/PDKdata/db/tcbn65gplushvtwc.db'
+Running PRESTO HDLC
+Compiling source file ./designs/ripple_carry_adder_4bit.v
+Presto compilation completed successfully.
+elaborate $DESIGN_NAME
+Loading db file '/software/nonrdist64/dc-2015.06-64/libraries/syn/gtech.db'
+Loading db file '/software/nonrdist64/dc-2015.06-64/libraries/syn/standard.sldb'
+  Loading link library 'tcbn65gpluslvtwc'
+  Loading link library 'tcbn65gpluswc'
+  Loading link library 'tcbn65gplushvtwc'
+  Loading link library 'gtech'
+Running PRESTO HDLC
+Presto compilation completed successfully.
+Elaborated 1 design.
+Current design is now 'ripple_carry_adder_4bit'.
+Information: Building the design 'full_adder'. (HDL-193)
+Presto compilation completed successfully.
+1
+# ------------------------------------------------------------------------------
+# Step 3: Design check and linking
+# ------------------------------------------------------------------------------
+puts "========================================"
+========================================
+puts "  Step 3: Linking and checking design"
+  Step 3: Linking and checking design
+puts "========================================"
+========================================
+current_design $DESIGN_NAME
+Current design is 'ripple_carry_adder_4bit'.
+{ripple_carry_adder_4bit}
+link
+
+  Linking design 'ripple_carry_adder_4bit'
+  Using the following designs and libraries:
+  --------------------------------------------------------------------------
+  * (2 designs)               /home/linux/ieng6/students/158/wex019/ic_agent/ripple_carry_adder_4bit.db, etc
+  tcbn65gpluslvtwc (library)  /home/linux/ieng6/ECE260B_WI26_A00/public/PDKdata/db/tcbn65gpluslvtwc.db
+  tcbn65gpluswc (library)     /home/linux/ieng6/ECE260B_WI26_A00/public/PDKdata/db/tcbn65gpluswc.db
+  tcbn65gplushvtwc (library)  /home/linux/ieng6/ECE260B_WI26_A00/public/PDKdata/db/tcbn65gplushvtwc.db
+
+1
+uniquify
+Information: Uniquified 4 instances of design 'full_adder'. (OPT-1056)
+1
+redirect ${OUTPUT_DIR}/check_design.rpt { check_design }
+puts "check_design written to ${OUTPUT_DIR}/check_design.rpt"
+check_design written to results/synth/check_design.rpt
+# ------------------------------------------------------------------------------
+# Step 4: Apply timing constraints
+# ------------------------------------------------------------------------------
+puts "========================================"
+========================================
+puts "  Step 4: Applying constraints"
+  Step 4: Applying constraints
+puts "========================================"
+========================================
+source $SDC_FILE
+Warning: Creating virtual clock named 'vclk' with no sources. (UID-348)
+puts "Applied constraints from $SDC_FILE"
+Applied constraints from scripts/constraints.sdc
+# Max fanout and transition
+set_max_fanout     8   [current_design]
+Current design is 'ripple_carry_adder_4bit'.
+1
+set_max_transition 0.5 [current_design]
+Current design is 'ripple_carry_adder_4bit'.
+1
+# ------------------------------------------------------------------------------
+# Step 5: Compile (synthesis)
+# ------------------------------------------------------------------------------
+puts "========================================"
+========================================
+puts "  Step 5: Synthesis"
+  Step 5: Synthesis
+puts "========================================"
+========================================
+compile_ultra -no_autoungroup
+Information: Performing power optimization. (PWR-850)
+Analyzing: "/home/linux/ieng6/ECE260B_WI26_A00/public/PDKdata/db/tcbn65gpluslvtwc.db"
+Analyzing: "/home/linux/ieng6/ECE260B_WI26_A00/public/PDKdata/db/tcbn65gpluswc.db"
+Analyzing: "/home/linux/ieng6/ECE260B_WI26_A00/public/PDKdata/db/tcbn65gplushvtwc.db"
+Library analysis succeeded.
+Loading db file '/software/nonrdist64/dc-2015.06-64/libraries/syn/dw_foundation.sldb'
+Warning: DesignWare synthetic library dw_foundation.sldb is added to the synthetic_library in the current command. (UISN-40)
+Information: Evaluating DesignWare library utilization. (UISN-27)
+
+============================================================================
+| DesignWare Building Block Library  |         Version         | Available |
+============================================================================
+| Basic DW Building Blocks           | K-2015.06-DWBB_201506.2 |     *     |
+| Licensed DW Building Blocks        | K-2015.06-DWBB_201506.2 |     *     |
+============================================================================
+
+Information: Sequential output inversion is enabled.  SVF file must be used for formal verification. (OPT-1208)
+  Simplifying Design 'ripple_carry_adder_4bit'
+
+Loaded alib file './alib-52/tcbn65gpluslvtwc.db.alib' (placeholder)
+Loaded alib file './alib-52/tcbn65gpluswc.db.alib' (placeholder)
+Loaded alib file './alib-52/tcbn65gplushvtwc.db.alib'
+Information: State dependent leakage is now switched from on to off.
+
+  Beginning Pass 1 Mapping
+  ------------------------
+  Processing 'ripple_carry_adder_4bit'
+  Processing 'full_adder_0'
+
+  Updating timing information
+Information: Updating design information... (UID-85)
+Information: The library cell 'TIELLVT' in the library 'tcbn65gpluslvtwc' is not characterized for internal power. (PWR-536)
+Information: The library cell 'TIEHLVT' in the library 'tcbn65gpluslvtwc' is not characterized for internal power. (PWR-536)
+Information: The library cell 'TIEL' in the library 'tcbn65gpluswc' is not characterized for internal power. (PWR-536)
+Information: The library cell 'TIEH' in the library 'tcbn65gpluswc' is not characterized for internal power. (PWR-536)
+Information: The library cell 'TIELHVT' in the library 'tcbn65gplushvtwc' is not characterized for internal power. (PWR-536)
+Information: The library cell 'TIEHHVT' in the library 'tcbn65gplushvtwc' is not characterized for internal power. (PWR-536)
+Information: The target library(s) contains cell(s), other than black boxes, that are not characterized for internal power. (PWR-24)
+
+  Beginning Mapping Optimizations  (Ultra High effort)
+  -------------------------------
+  Mapping Optimization (Phase 1)
+
+  Beginning Constant Register Removal
+  -----------------------------------
+
+  Beginning Global Optimizations
+  ------------------------------
+  Numerical Synthesis (Phase 1)
+  Numerical Synthesis (Phase 2)
+  Global Optimization (Phase 1)
+  Global Optimization (Phase 2)
+  Global Optimization (Phase 3)
+  Global Optimization (Phase 4)
+  Global Optimization (Phase 5)
+  Global Optimization (Phase 6)
+  Global Optimization (Phase 7)
+  Global Optimization (Phase 8)
+  Global Optimization (Phase 9)
+  Global Optimization (Phase 10)
+  Global Optimization (Phase 11)
+  Global Optimization (Phase 12)
+  Global Optimization (Phase 13)
+  Global Optimization (Phase 14)
+  Global Optimization (Phase 15)
+  Global Optimization (Phase 16)
+  Global Optimization (Phase 17)
+  Global Optimization (Phase 18)
+  Global Optimization (Phase 19)
+  Global Optimization (Phase 20)
+  Global Optimization (Phase 21)
+  Global Optimization (Phase 22)
+  Global Optimization (Phase 23)
+  Global Optimization (Phase 24)
+  Global Optimization (Phase 25)
+  Global Optimization (Phase 26)
+  Global Optimization (Phase 27)
+  Global Optimization (Phase 28)
+
+  Beginning Isolate Ports
+  -----------------------
+
+  Beginning Delay Optimization
+  ----------------------------
+
+                                  TOTAL                                                
+   ELAPSED            WORST NEG   SETUP    DESIGN                              LEAKAGE 
+    TIME      AREA      SLACK     COST    RULE COST         ENDPOINT            POWER  
+  --------- --------- --------- --------- --------- ------------------------- ---------
+    0:00:21      36.0      0.29       0.7       2.7                            152.9965
+    0:00:21      42.8      0.10       0.1       1.1                            225.0839
+    0:00:21      42.8      0.10       0.1       1.1                            225.0839
+    0:00:21      42.8      0.10       0.1       1.1                            225.0839
+
+  Beginning WLM Backend Optimization
+  --------------------------------------
+
+  Beginning Delay Optimization HSVT Pass
+  --------------------------------------
+    0:00:29      42.8      0.10       0.1       1.1                            225.0839
+    0:00:29      42.8      0.10       0.1       1.1                            225.0839
+    0:00:29      42.8      0.10       0.1       1.1                            225.0839
+    0:00:29      56.5      0.00       0.0       0.6                            255.6965
+    0:00:32      56.5      0.00       0.0       0.6                            255.6965
+    0:00:32      56.5      0.00       0.0       0.6                            255.6965
+    0:00:32      56.5      0.00       0.0       0.6                            255.6965
+    0:00:32      56.5      0.00       0.0       0.6                            255.6965
+    0:00:36      56.5      0.00       0.0       0.6                            255.6965
+    0:00:36      54.0      0.00       0.0       0.6                            224.7027
+    0:00:36      54.0      0.00       0.0       0.6                            224.7027
+    0:00:36      54.0      0.00       0.0       0.6                            224.7027
+    0:00:36      54.0      0.00       0.0       0.6                            224.7027
+    0:00:36      54.0      0.00       0.0       0.6                            224.7027
+    0:00:36      54.0      0.00       0.0       0.6                            224.7027
+    0:00:36      54.0      0.00       0.0       0.6                            224.7027
+    0:00:36      54.0      0.00       0.0       0.6                            224.7027
+    0:00:36      54.0      0.00       0.0       0.6                            224.7027
+    0:00:36      54.0      0.00       0.0       0.6                            224.7027
+    0:00:36      54.0      0.00       0.0       0.6                            224.7027
+
+  Beginning Delay Optimization
+  ----------------------------
+    0:00:36      54.0      0.00       0.0       0.6                            224.7027
+    0:00:36      54.0      0.00       0.0       0.6                            224.7027
+    0:00:36      54.0      0.00       0.0       0.6                            224.7027
+    0:00:36      54.0      0.00       0.0       0.6                            224.7027
+    0:00:36      54.0      0.00       0.0       0.6                            224.7027
+    0:00:36      54.0      0.00       0.0       0.6                            224.7027
+    0:00:36      54.0      0.00       0.0       0.6                            224.7027
+    0:00:36      54.0      0.00       0.0       0.6                            224.7027
+
+
+  Beginning Design Rule Fixing  (max_transition)  (max_capacitance)
+  ----------------------------
+
+                                  TOTAL                                                
+   ELAPSED            WORST NEG   SETUP    DESIGN                              LEAKAGE 
+    TIME      AREA      SLACK     COST    RULE COST         ENDPOINT            POWER  
+  --------- --------- --------- --------- --------- ------------------------- ---------
+    0:00:36      54.0      0.00       0.0       0.6                            224.7027
+  Global Optimization (Phase 29)
+  Global Optimization (Phase 30)
+  Global Optimization (Phase 31)
+    0:00:36      55.4      0.00       0.0       0.0                            696.3428
+    0:00:36      55.4      0.00       0.0       0.0                            696.3428
+
+
+  Beginning Leakage Power Optimization  (max_leakage_power 0)
+  ------------------------------------
+
+                                  TOTAL                                                
+   ELAPSED            WORST NEG   SETUP    DESIGN                              LEAKAGE 
+    TIME      AREA      SLACK     COST    RULE COST         ENDPOINT            POWER  
+  --------- --------- --------- --------- --------- ------------------------- ---------
+    0:00:36      55.4      0.00       0.0       0.0                            696.3428
+  Global Optimization (Phase 32)
+  Global Optimization (Phase 33)
+  Global Optimization (Phase 34)
+  Global Optimization (Phase 35)
+  Global Optimization (Phase 36)
+  Global Optimization (Phase 37)
+  Global Optimization (Phase 38)
+  Global Optimization (Phase 39)
+  Global Optimization (Phase 40)
+  Global Optimization (Phase 41)
+  Global Optimization (Phase 42)
+  Global Optimization (Phase 43)
+    0:00:36      57.2      0.00       0.0       0.0                            441.1208
+    0:00:36      57.2      0.00       0.0       0.0                            441.1208
+    0:00:36      57.2      0.00       0.0       0.0                            441.1208
+    0:00:37      53.6      0.00       0.0       0.0                            413.9450
+    0:00:37      53.6      0.00       0.0       0.0                            413.9450
+    0:00:37      53.6      0.00       0.0       0.0                            413.9450
+    0:00:37      53.6      0.00       0.0       0.0                            413.9450
+    0:00:37      53.6      0.00       0.0       0.0                            413.9450
+    0:00:37      53.6      0.00       0.0       0.0                            413.9450
+    0:00:37      53.6      0.00       0.0       0.0                            413.9450
+    0:00:37      53.6      0.00       0.0       0.0                            413.9450
+    0:00:37      53.6      0.00       0.0       0.0                            413.9450
+    0:00:37      53.6      0.00       0.0       0.0                            413.9450
+    0:00:37      53.6      0.00       0.0       0.0                            413.9450
+    0:00:37      53.6      0.00       0.0       0.0                            413.9450
+    0:00:37      53.6      0.00       0.0       0.0                            413.9450
+    0:00:37      53.6      0.00       0.0       0.0                            413.9450
+    0:00:37      53.6      0.00       0.0       0.0                            413.9450
+    0:00:37      53.6      0.00       0.0       0.0                            413.9450
+    0:00:37      53.6      0.00       0.0       0.0                            413.9450
+    0:00:37      53.6      0.00       0.0       0.0                            413.9450
+    0:00:37      53.6      0.00       0.0       0.0                            413.9450
+
+                                  TOTAL                                                
+   ELAPSED            WORST NEG   SETUP    DESIGN                              LEAKAGE 
+    TIME      AREA      SLACK     COST    RULE COST         ENDPOINT            POWER  
+  --------- --------- --------- --------- --------- ------------------------- ---------
+    0:00:37      53.6      0.00       0.0       0.0                            413.9450
+    0:00:37      46.8      0.00       0.0       0.0                            235.3047
+    0:00:37      46.8      0.00       0.0       0.0                            235.3047
+    0:00:37      46.8      0.00       0.0       0.0                            235.3047
+    0:00:38      48.6      0.00       0.0       0.0                            196.5665
+
+  Beginning Delay Optimization HSVT Pass
+  --------------------------------------
+    0:00:40      48.6      0.00       0.0       0.0                            196.5665
+    0:00:40      48.6      0.00       0.0       0.0                            196.5665
+    0:00:40      48.6      0.00       0.0       0.0                            196.5665
+    0:00:40      48.6      0.00       0.0       0.0                            196.5665
+    0:00:43      48.6      0.00       0.0       0.0                            196.5665
+    0:00:43      48.6      0.00       0.0       0.0                            196.5665
+    0:00:43      48.6      0.00       0.0       0.0                            196.5665
+    0:00:43      48.6      0.00       0.0       0.0                            196.5665
+    0:00:47      48.6      0.00       0.0       0.0                            193.5734
+    0:00:47      48.6      0.00       0.0       0.0                            193.5734
+    0:00:47      48.6      0.00       0.0       0.0                            193.5734
+    0:00:47      48.6      0.00       0.0       0.0                            193.5734
+Loading db file '/home/linux/ieng6/ECE260B_WI26_A00/public/PDKdata/db/tcbn65gpluslvtwc.db'
+Loading db file '/home/linux/ieng6/ECE260B_WI26_A00/public/PDKdata/db/tcbn65gpluswc.db'
+Loading db file '/home/linux/ieng6/ECE260B_WI26_A00/public/PDKdata/db/tcbn65gplushvtwc.db'
+
+
+Note: Symbol # after min delay cost means estimated hold TNS across all active scenarios 
+
+
+  Optimization Complete
+  ---------------------
+Information: State dependent leakage is now switched from off to on.
+Information: Propagating switching activity (low effort zero delay simulation). (PWR-6)
+1
+# ------------------------------------------------------------------------------
+# Step 6: Generate reports
+# ------------------------------------------------------------------------------
+puts "========================================"
+========================================
+puts "  Step 6: Reports"
+  Step 6: Reports
+puts "========================================"
+========================================
+redirect ${OUTPUT_DIR}/timing.rpt      { report_timing -max_paths 20 -input_pins }
+redirect ${OUTPUT_DIR}/area.rpt        { report_area   -hierarchy }
+redirect ${OUTPUT_DIR}/power.rpt       { report_power }
+redirect ${OUTPUT_DIR}/qor.rpt         { report_qor }
+redirect ${OUTPUT_DIR}/constraints.rpt { report_constraint -all_violators }
+puts "-------- TIMING SUMMARY --------"
+-------- TIMING SUMMARY --------
+report_timing -max_paths 1
+ 
+****************************************
+Report : timing
+        -path full
+        -delay max
+        -max_paths 1
+Design : ripple_carry_adder_4bit
+Version: K-2015.06-SP2
+Date   : Fri Feb 27 00:37:51 2026
+****************************************
+
+Operating Conditions: WCCOM   Library: tcbn65gpluslvtwc
+Wire Load Model Mode: segmented
+
+  Startpoint: cin (input port clocked by vclk)
+  Endpoint: sum[3] (output port clocked by vclk)
+  Path Group: vclk
+  Path Type: max
+
+  Des/Clust/Port     Wire Load Model       Library
+  ------------------------------------------------
+  ripple_carry_adder_4bit
+                     ZeroWireload          tcbn65gpluslvtwc
+  full_adder_3       ZeroWireload          tcbn65gpluslvtwc
+  full_adder_2       ZeroWireload          tcbn65gpluslvtwc
+  full_adder_1       ZeroWireload          tcbn65gpluslvtwc
+  full_adder_0       ZeroWireload          tcbn65gpluslvtwc
+
+  Point                                                   Incr       Path
+  --------------------------------------------------------------------------
+  input external delay                                    2.00       2.00 r
+  cin (in)                                                0.00       2.00 r
+  fa_stage[0].u_fa/cin (full_adder_3)                     0.00       2.00 r
+  fa_stage[0].u_fa/U5/ZN (OAI21D0HVT)                     0.16       2.16 f
+  fa_stage[0].u_fa/U4/ZN (CKND2D0HVT)                     0.09       2.25 r
+  fa_stage[0].u_fa/cout (full_adder_3)                    0.00       2.25 r
+  fa_stage[1].u_fa/cin (full_adder_2)                     0.00       2.25 r
+  fa_stage[1].u_fa/U1/CO (FA1D2HVT)                       0.10       2.35 r
+  fa_stage[1].u_fa/cout (full_adder_2)                    0.00       2.35 r
+  fa_stage[2].u_fa/cin (full_adder_1)                     0.00       2.35 r
+  fa_stage[2].u_fa/U4/ZN (INVD0HVT)                       0.03       2.38 f
+  fa_stage[2].u_fa/U1/ZN (OAI21D0HVT)                     0.10       2.47 r
+  fa_stage[2].u_fa/cout (full_adder_1)                    0.00       2.47 r
+  fa_stage[3].u_fa/cin (full_adder_0)                     0.00       2.47 r
+  fa_stage[3].u_fa/U1/S (FA1D2HVT)                        0.31       2.79 r
+  fa_stage[3].u_fa/sum (full_adder_0)                     0.00       2.79 r
+  sum[3] (out)                                            0.00       2.79 r
+  data arrival time                                                  2.79
+
+  max_delay                                               5.00       5.00
+  output external delay                                  -2.00       3.00
+  data required time                                                 3.00
+  --------------------------------------------------------------------------
+  data required time                                                 3.00
+  data arrival time                                                 -2.79
+  --------------------------------------------------------------------------
+  slack (MET)                                                        0.21
+
+
+1
+puts "---------------------------------"
+---------------------------------
+# ------------------------------------------------------------------------------
+# Step 7: Write outputs
+# ------------------------------------------------------------------------------
+puts "========================================"
+========================================
+puts "  Step 7: Writing outputs"
+  Step 7: Writing outputs
+puts "========================================"
+========================================
+write -format verilog -hierarchy     -output designs/${DESIGN_NAME}_synth.v
+Writing verilog file '/home/linux/ieng6/students/158/wex019/ic_agent/designs/ripple_carry_adder_4bit_synth.v'.
+1
+puts "Gate-level netlist: designs/${DESIGN_NAME}_synth.v"
+Gate-level netlist: designs/ripple_carry_adder_4bit_synth.v
+write_sdc -nosplit scripts/constraints_synth.sdc
+1
+puts "Updated SDC: scripts/constraints_synth.sdc"
+Updated SDC: scripts/constraints_synth.sdc
+puts "========================================"
+========================================
+puts "  SYNTHESIS COMPLETE — check ${OUTPUT_DIR}/ for reports"
+  SYNTHESIS COMPLETE — check results/synth/ for reports
+puts "========================================"
+========================================
+exit
+
+Thank you...

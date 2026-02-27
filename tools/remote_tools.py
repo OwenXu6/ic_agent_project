@@ -232,7 +232,7 @@ def _sync_to_remote() -> str:
         return f"ERROR (sync_to_remote): {exc}"
 
 
-def _run_remote_command(command: str) -> str:
+def _run_remote_command(command: str, timeout: int = 400) -> str:
     """
     Run *command* on the remote server under the full ACMS EDA environment.
 
@@ -248,16 +248,38 @@ def _run_remote_command(command: str) -> str:
     """
     import io
 
-    prep_course = getattr(config, "REMOTE_PREP_COURSE", "ECE260B_WI26_A00")
-    ts          = int(time.time())
+    ts = int(time.time())
     script_path = f"/tmp/{config.REMOTE_USER}_ic_run_{ts}.sh"
 
-    # The script runs inside a login bash (#!/bin/bash reads /etc/profile
-    # because we invoke it with "bash --login"). We call prep to load EDA
-    # tools, then run the user command.
+    prep_course = getattr(config, "REMOTE_PREP_COURSE", "ECE260B_WI26_A00")
+
+    # Load EDA environment.  Two strategies, tried in order:
+    #
+    # 1. Source ~/.eda_env (captured once from a Desktop session by running
+    #    tools/capture_eda_env.sh after `prep -l ECE260B_WI26_A00`).
+    #    This is the most reliable path because it carries the exact PATH
+    #    and license vars from a known-good session.
+    #
+    # 2. Fall back to re-initialising the module system and loading the
+    #    individual EDA modules (works when the NFS is already mounted,
+    #    e.g. on CentOS7 nodes, but fails on Debian nodes that only
+    #    mount /software/ECE and /software/nonrdist64 during Desktop login).
     script = (
         "export TERM=xterm\n"
-        f"prep -l {prep_course} 2>&1\n"
+        "if [ -f ~/.eda_env ]; then\n"
+        "  . ~/.eda_env\n"
+        "  echo 'EDA_ENV: loaded ~/.eda_env'\n"
+        "else\n"
+        "  . /usr/share/modules/init/bash 2>/dev/null\n"
+        "  export ACMS_MODULES=/public/Modules\n"
+        "  export MODULEPATH=/public/Modules/cse-modulefiles:"
+        "/public/Modules/acms-modulefiles:"
+        f"/home/linux/ieng6/{prep_course}/public/modulefiles\n"
+        "  module load design-compiler-2015.06-64 2>&1\n"
+        "  module load cadence-innovus211 2>&1\n"
+        f"  export PDK_DIR=/home/linux/ieng6/{prep_course}/public/PDKdata\n"
+        "  echo 'EDA_ENV: loaded via module system'\n"
+        "fi\n"
         "echo PREP_DONE_OK\n"
         f"{command} 2>&1\n"
         "echo EXIT_CODE:$?\n"
@@ -269,11 +291,11 @@ def _run_remote_command(command: str) -> str:
         sftp.putfo(io.BytesIO(script.encode()), script_path)
         sftp.close()
 
-        # bash --login reads /etc/profile -> prep becomes available
+        # bash --login reads /etc/profile.d/*.sh (including modules.sh)
         stdin, stdout, stderr = ssh.exec_command(
             f"bash --login {script_path}",
             get_pty=True,
-            timeout=400,
+            timeout=timeout,
         )
 
         raw_out  = stdout.read().decode("utf-8", errors="replace")
@@ -310,7 +332,7 @@ def _run_remote_command(command: str) -> str:
 
         parts = []
         if prep_section:
-            parts.append(f"[prep -l {prep_course}]\n{prep_section}")
+            parts.append(f"[env setup]\n{prep_section}")
         parts.append(f"[command output]\n{cmd_section}")
         parts.append(f"[{exit_line or f'EXIT_CODE:{exit_val}'}]")
         return "\n\n".join(parts)

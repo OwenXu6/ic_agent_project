@@ -1,14 +1,14 @@
 # ==============================================================================
 # Innovus Place & Route TCL Script
-# Design: ripple_carry_adder_4bit
+# Design: alu_8bit
 # Technology: TSMC 65nm GP (tcbn65gplus) — ECE260B PDK
 # Uses MMMC (Multi-Mode Multi-Corner) flow for Innovus v21
 # ==============================================================================
 
-set DESIGN_NAME  "ripple_carry_adder_4bit"
-set NETLIST_FILE "designs/ripple_carry_adder_4bit_synth.v"
-set SDC_FILE     "scripts/constraints_synth.sdc"
-set OUTPUT_DIR   "results/innovus"
+set DESIGN_NAME  "alu_8bit"
+set NETLIST_FILE "designs/alu_8bit_synth.v"
+set SDC_FILE     "scripts/constraints_alu_synth.sdc"
+set OUTPUT_DIR   "results/innovus_alu"
 
 set PDK_DIR "/home/linux/ieng6/ECE260B_WI26_A00/public/PDKdata"
 
@@ -43,9 +43,7 @@ puts "========================================"
 puts "  Step 1: Reading Design Data (MMMC)"
 puts "========================================"
 
-# Innovus 21 requires an MMMC view-definition FILE (init_mmmc_file).
-# Write MMMC config to a temp file, then reference it via init_design globals.
-set mmmc_path "/tmp/ic_agent_mmmc_viewdef.tcl"
+set mmmc_path "/tmp/ic_agent_alu_mmmc_viewdef.tcl"
 set fp [open $mmmc_path w]
 puts $fp "create_library_set -name wc_libs -timing {$LIB_FILES}"
 puts $fp "create_constraint_mode -name func_mode -sdc_files {$SDC_FILE}"
@@ -55,7 +53,6 @@ puts $fp "set_analysis_view -setup {wc_view} -hold {wc_view}"
 close $fp
 puts "Written MMMC view definition to $mmmc_path"
 
-# Use the standard init_design global variables (EDI / Innovus flow)
 set init_lef_file  $LEF_FILES
 set init_mmmc_file $mmmc_path
 set init_verilog   $NETLIST_FILE
@@ -63,7 +60,6 @@ set init_top_cell  $DESIGN_NAME
 set init_pwr_net   $POWER_NET
 set init_gnd_net   $GROUND_NET
 
-# init_design reads LEF, netlist, and MMMC file in one shot
 init_design
 
 # ------------------------------------------------------------------------------
@@ -121,11 +117,14 @@ puts "========================================"
 place_design
 
 # ------------------------------------------------------------------------------
-# Step 5: CTS — skip for combinational design
+# Step 5: CTS
 # ------------------------------------------------------------------------------
 puts "========================================"
-puts "  Step 5: CTS — skipped (combinational)"
+puts "  Step 5: Clock Tree Synthesis"
 puts "========================================"
+
+create_ccopt_clock_tree_spec
+ccopt_design
 
 # ------------------------------------------------------------------------------
 # Step 6: Routing

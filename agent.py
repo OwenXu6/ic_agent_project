@@ -120,16 +120,25 @@ def run_agent(task: str):
     print(f"{'='*60}\n")
 
     for turn in range(config.MAX_AGENT_TURNS):
-        # Call Claude with streaming for long responses
-        with client.messages.stream(
-            model=config.MODEL,
-            max_tokens=8192,
-            thinking={"type": "adaptive"},
-            system=SYSTEM_PROMPT,
-            tools=ALL_TOOLS,
-            messages=messages,
-        ) as stream:
-            response = stream.get_final_message()
+        # Call Claude with streaming, retrying on rate-limit errors
+        for attempt in range(6):
+            try:
+                with client.messages.stream(
+                    model=config.MODEL,
+                    max_tokens=8192,
+                    thinking={"type": "adaptive"},
+                    system=SYSTEM_PROMPT,
+                    tools=ALL_TOOLS,
+                    messages=messages,
+                ) as stream:
+                    response = stream.get_final_message()
+                break  # success
+            except anthropic.RateLimitError as e:
+                wait = 30 * (attempt + 1)
+                print(f"\n[rate-limit] Hit API rate limit, retrying in {wait}s... ({e})")
+                import time; time.sleep(wait)
+        else:
+            raise RuntimeError("Exceeded rate-limit retry budget")
 
         # Show assistant text output
         for block in response.content:
