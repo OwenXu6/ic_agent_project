@@ -277,9 +277,13 @@ def _run_remote_command(command: str) -> str:
         while chan.recv_ready():
             chan.recv(4096)
 
-        # ── 2. Load EDA tools via prep ───────────────────────────────────────
-        chan.send(f"prep -l {prep_course} 2>&1; echo '{prep_sentinel}'\n")
-        prep_raw = _wait_for(prep_sentinel, timeout=60)
+        # ── 2. Load EDA tools via module system ──────────────────────────────────
+        # `prep` is not available in a PTY session; use `module` directly.
+        # The course modulefiles live at /home/linux/ieng6/<COURSE>/public/modulefiles
+        module_dir = f"/home/linux/ieng6/{prep_course}/public/modulefiles"
+        setup_cmd  = f"module use {module_dir} && module load {prep_course}"
+        chan.send(f"{setup_cmd} 2>&1; echo '{prep_sentinel}'\n")
+        prep_raw = _wait_for(prep_sentinel, timeout=90)
         prep_clean = _strip_ansi(prep_raw.split(prep_sentinel)[0]).strip()
 
         # ── 3. Run user command; capture exit code; echo sentinel ────────────

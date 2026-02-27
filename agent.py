@@ -14,9 +14,25 @@ Usage:
 
 import sys
 import json
+import os
 import anthropic
 import config
 from tools import ALL_TOOLS, execute_tool
+
+# Load .env if present (provides ANTHROPIC_API_KEY without polluting git)
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    # Fallback: parse .env manually
+    _env_path = os.path.join(os.path.dirname(__file__), ".env")
+    if os.path.exists(_env_path):
+        with open(_env_path) as _f:
+            for _line in _f:
+                _line = _line.strip()
+                if _line and not _line.startswith("#") and "=" in _line:
+                    _k, _v = _line.split("=", 1)
+                    os.environ.setdefault(_k.strip(), _v.strip())
 
 SYSTEM_PROMPT = """You are an expert IC design engineer and EDA automation specialist.
 You help users design digital hardware using Verilog/SystemVerilog, run simulations,
