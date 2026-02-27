@@ -23,6 +23,21 @@ import config
 
 REMOTE_TOOLS = [
     {
+        "name": "sync_to_remote",
+        "description": (
+            "Sync the entire local project to the remote server in one call. "
+            "Uploads all design files (Verilog, TCL, SDC, etc.) to REMOTE_WORK_DIR, "
+            "creating subdirectories as needed. Skips credentials, git, and build artifacts. "
+            "Always call this before running dc_shell or innovus on the remote server "
+            "to make sure the server has the latest files."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+            "required": []
+        }
+    },
+    {
         "name": "run_remote_command",
         "description": (
             "Run a command on the remote school EDA server via SSH. "
@@ -98,7 +113,9 @@ def execute_remote_tool(tool_name: str, tool_input: dict) -> str:
             "Please set REMOTE_HOST, REMOTE_USER in config.py first."
         )
 
-    if tool_name == "run_remote_command":
+    if tool_name == "sync_to_remote":
+        return _sync_to_remote()
+    elif tool_name == "run_remote_command":
         return _run_remote_command(tool_input["command"])
     elif tool_name == "upload_to_remote":
         return _upload_file(tool_input["local_path"], tool_input["remote_path"])
@@ -148,6 +165,71 @@ def _get_ssh_client():
             timeout=30,
         )
     return ssh
+
+
+def _sync_to_remote() -> str:
+    """
+    Walk the local project and upload every source file to REMOTE_WORK_DIR.
+
+    Uploaded extensions: .v  .sv  .tcl  .sdc  .py (not config.py)  .txt  .md
+    Skipped paths: .git/  __pycache__/  .env  config.py  results/  *.gitkeep
+    """
+    UPLOAD_EXTS = {".v", ".sv", ".tcl", ".sdc", ".txt", ".md"}
+    SKIP_NAMES  = {"config.py", ".env", ".gitkeep"}
+    SKIP_DIRS   = {".git", "__pycache__", "results", ".claude"}
+
+    remote_base = getattr(config, "REMOTE_WORK_DIR",
+                          f"/home/{config.REMOTE_USER}/ic_agent")
+
+    try:
+        ssh  = _get_ssh_client()
+        sftp = ssh.open_sftp()
+
+        # Ensure remote base directory exists
+        ssh.exec_command(f"mkdir -p {remote_base}")
+        time.sleep(0.5)
+
+        uploaded = []
+        skipped  = []
+
+        for root, dirs, files in os.walk(config.WORK_DIR):
+            # Prune skip dirs in-place so os.walk doesn't descend into them
+            dirs[:] = [d for d in dirs if d not in SKIP_DIRS]
+
+            for fname in files:
+                ext = os.path.splitext(fname)[1].lower()
+                if fname in SKIP_NAMES:
+                    skipped.append(fname)
+                    continue
+                if ext not in UPLOAD_EXTS:
+                    skipped.append(fname)
+                    continue
+
+                local_abs  = os.path.join(root, fname)
+                rel_path   = os.path.relpath(local_abs, config.WORK_DIR)
+                remote_abs = remote_base + "/" + rel_path.replace(os.sep, "/")
+                remote_dir = os.path.dirname(remote_abs)
+
+                # Create remote subdirectory if needed
+                ssh.exec_command(f"mkdir -p {remote_dir}")
+                time.sleep(0.1)
+
+                sftp.put(local_abs, remote_abs)
+                uploaded.append(rel_path)
+
+        sftp.close()
+        ssh.close()
+
+        lines = [f"Synced to {remote_base}"]
+        lines.append(f"  Uploaded ({len(uploaded)}):")
+        for f in sorted(uploaded):
+            lines.append(f"    {f}")
+        if skipped:
+            lines.append(f"  Skipped  ({len(skipped)}): {', '.join(sorted(set(skipped)))}")
+        return "\n".join(lines)
+
+    except Exception as exc:
+        return f"ERROR (sync_to_remote): {exc}"
 
 
 def _run_remote_command(command: str) -> str:
