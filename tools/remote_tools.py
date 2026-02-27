@@ -277,12 +277,16 @@ def _run_remote_command(command: str) -> str:
         while chan.recv_ready():
             chan.recv(4096)
 
-        # ── 2. Load EDA tools via module system ──────────────────────────────────
-        # `prep` is not available in a PTY session; use `module` directly.
-        # The course modulefiles live at /home/linux/ieng6/<COURSE>/public/modulefiles
-        module_dir = f"/home/linux/ieng6/{prep_course}/public/modulefiles"
-        setup_cmd  = f"module use {module_dir} && module load {prep_course}"
-        chan.send(f"{setup_cmd} 2>&1; echo '{prep_sentinel}'\n")
+        # ── 2. Source /etc/profile so ACMS env (including `prep`) is available ──
+        # invoke_shell() opens an interactive (not login) shell, so /etc/profile
+        # is not automatically sourced. Sourcing it makes `prep` available.
+        chan.send("source /etc/profile 2>/dev/null; source ~/.bashrc 2>/dev/null; true\n")
+        time.sleep(2)
+        while chan.recv_ready():
+            chan.recv(4096)
+
+        # ── 3. Load EDA tools via prep ────────────────────────────────────────
+        chan.send(f"prep -l {prep_course} 2>&1; echo '{prep_sentinel}'\n")
         prep_raw = _wait_for(prep_sentinel, timeout=90)
         prep_clean = _strip_ansi(prep_raw.split(prep_sentinel)[0]).strip()
 
