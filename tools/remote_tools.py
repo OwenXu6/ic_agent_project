@@ -234,95 +234,89 @@ def _sync_to_remote() -> str:
 
 def _run_remote_command(command: str) -> str:
     """
-    Run *command* on the remote server inside an interactive PTY session.
+    Run *command* on the remote server under the full ACMS EDA environment.
 
-    Flow:
-      1. Open an interactive shell (PTY) — this triggers ~/.bashrc / login init.
-      2. Drain the MOTD / initial banner.
-      3. Run `prep -l <COURSE>` to load ACMS EDA modules (Innovus, etc.).
-      4. Run the user's command.
-      5. Echo a unique sentinel so we know when the command finishes.
-      6. Return cleaned-up output (ANSI stripped, exit code included).
+    Strategy: write a temporary bash script and execute it with
+    `bash --login`, which forces bash to read /etc/profile.
+    /etc/profile on ieng6 defines the `prep` function and loads the ACMS
+    module system, making dc_shell, innovus, etc. available via:
+        prep -l ECE260B_WI26_A00
+
+    This is more reliable than invoke_shell() (PTY) because the PTY's
+    interactive shell may not be a login shell and therefore skips
+    /etc/profile. bash --login guarantees the login initialization.
     """
+    import io
+
     prep_course = getattr(config, "REMOTE_PREP_COURSE", "ECE260B_WI26_A00")
-    ts = int(time.time())
-    prep_sentinel = f"__PREP_DONE_{ts}__"
-    cmd_sentinel  = f"__CMD_DONE_{ts}__"
+    ts          = int(time.time())
+    script_path = f"/tmp/{config.REMOTE_USER}_ic_run_{ts}.sh"
+
+    # The script runs inside a login bash (#!/bin/bash reads /etc/profile
+    # because we invoke it with "bash --login"). We call prep to load EDA
+    # tools, then run the user command.
+    script = (
+        "export TERM=xterm\n"
+        f"prep -l {prep_course} 2>&1\n"
+        "echo PREP_DONE_OK\n"
+        f"{command} 2>&1\n"
+        "echo EXIT_CODE:$?\n"
+    )
 
     try:
-        import paramiko
-    except ImportError:
-        return "ERROR: paramiko not installed. Run: pip install paramiko"
+        ssh  = _get_ssh_client()
+        sftp = ssh.open_sftp()
+        sftp.putfo(io.BytesIO(script.encode()), script_path)
+        sftp.close()
 
-    try:
-        ssh = _get_ssh_client()
-        chan = ssh.invoke_shell(width=220, height=50)
+        # bash --login reads /etc/profile -> prep becomes available
+        stdin, stdout, stderr = ssh.exec_command(
+            f"bash --login {script_path}",
+            get_pty=True,
+            timeout=400,
+        )
 
-        # ── helper: accumulate output until sentinel or timeout ──────────────
-        def _wait_for(sentinel: str, timeout: int) -> str:
-            buf = ""
-            deadline = time.time() + timeout
-            while time.time() < deadline:
-                if chan.recv_ready():
-                    chunk = chan.recv(8192).decode("utf-8", errors="replace")
-                    buf += chunk
-                    if sentinel in buf:
-                        return buf
-                else:
-                    time.sleep(0.1)
-            return buf + f"\n[TIMEOUT after {timeout}s — sentinel not seen]"
+        raw_out  = stdout.read().decode("utf-8", errors="replace")
+        raw_err  = stderr.read().decode("utf-8", errors="replace")
+        exit_val = stdout.channel.recv_exit_status()
 
-        # ── 1. Drain initial banner / MOTD ───────────────────────────────────
-        time.sleep(2)
-        while chan.recv_ready():
-            chan.recv(4096)
-
-        # ── 2. Source /etc/profile so ACMS env (including `prep`) is available ──
-        # invoke_shell() opens an interactive (not login) shell, so /etc/profile
-        # is not automatically sourced. Sourcing it makes `prep` available.
-        chan.send("source /etc/profile 2>/dev/null; source ~/.bashrc 2>/dev/null; true\n")
-        time.sleep(2)
-        while chan.recv_ready():
-            chan.recv(4096)
-
-        # ── 3. Load EDA tools via prep ────────────────────────────────────────
-        chan.send(f"prep -l {prep_course} 2>&1; echo '{prep_sentinel}'\n")
-        prep_raw = _wait_for(prep_sentinel, timeout=90)
-        prep_clean = _strip_ansi(prep_raw.split(prep_sentinel)[0]).strip()
-
-        # ── 3. Run user command; capture exit code; echo sentinel ────────────
-        chan.send(f"{command} 2>&1; echo \"EXIT_CODE:$?\"; echo '{cmd_sentinel}'\n")
-        cmd_raw = _wait_for(cmd_sentinel, timeout=300)
-
+        # Clean up temp script
+        try:
+            ssh.exec_command(f"rm -f {script_path}")
+        except Exception:
+            pass
         ssh.close()
 
-        # ── 4. Parse output ──────────────────────────────────────────────────
-        if cmd_sentinel in cmd_raw:
-            cmd_body = _strip_ansi(cmd_raw.split(cmd_sentinel)[0]).strip()
-        else:
-            cmd_body = _strip_ansi(cmd_raw).strip() + "\n[WARNING: timed out]"
+        combined = _strip_ansi(raw_out + (f"\n[stderr] {raw_err}" if raw_err.strip() else ""))
 
-        # Extract exit code line
-        exit_code_str = ""
-        lines = cmd_body.split("\n")
-        filtered = []
-        for line in lines:
+        # Split at PREP_DONE_OK so we can label prep vs command output
+        if "PREP_DONE_OK" in combined:
+            before, after = combined.split("PREP_DONE_OK", 1)
+            prep_section = before.strip()
+            cmd_section  = after.strip()
+        else:
+            prep_section = ""
+            cmd_section  = combined.strip()
+
+        # Extract EXIT_CODE line
+        exit_line = ""
+        cmd_lines = []
+        for line in cmd_section.splitlines():
             if line.startswith("EXIT_CODE:"):
-                exit_code_str = line
+                exit_line = line
             else:
-                filtered.append(line)
-        cmd_body = "\n".join(filtered).strip()
+                cmd_lines.append(line)
+        cmd_section = "\n".join(cmd_lines).strip()
 
         parts = []
-        if prep_clean:
-            parts.append(f"[prep -l {prep_course}]\n{prep_clean}")
-        parts.append(f"[command output]\n{cmd_body}")
-        if exit_code_str:
-            parts.append(f"[{exit_code_str}]")
+        if prep_section:
+            parts.append(f"[prep -l {prep_course}]\n{prep_section}")
+        parts.append(f"[command output]\n{cmd_section}")
+        parts.append(f"[{exit_line or f'EXIT_CODE:{exit_val}'}]")
         return "\n\n".join(parts)
 
     except Exception as exc:
-        return f"ERROR (SSH PTY): {exc}"
+        return f"ERROR (run_remote_command): {exc}"
 
 
 def _upload_file(local_path: str, remote_path: str) -> str:
