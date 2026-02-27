@@ -2,17 +2,23 @@
 Remote tools for executing commands on the school EDA server via SSH.
 
 Configuration in config.py:
-    REMOTE_HOST  — hostname or IP of the school server
-    REMOTE_USER  — your username
-    REMOTE_KEY   — path to your SSH private key (default: ~/.ssh/id_rsa)
-    REMOTE_WORK_DIR — working directory on the remote server
+    REMOTE_HOST         — hostname or IP of the school server
+    REMOTE_USER         — your username
+    REMOTE_KEY          — path to your SSH private key (default: password auth)
+    REMOTE_PASSWORD     — password (if not using key auth)
+    REMOTE_WORK_DIR     — working directory on the remote server
+    REMOTE_PREP_COURSE  — course label for `prep` (default: "ECE260B_WI26_A00")
 
-SSH must be set up (public key auth recommended). Test with:
-    ssh <REMOTE_USER>@<REMOTE_HOST>
-before using these tools.
+All EDA commands are run inside an interactive PTY session so that
+`prep -l <COURSE>` can load the ACMS module environment (Innovus, etc.)
+before your command executes. This is required on UCSD ieng6 because
+the EDA binaries live on an NFS mount that is only activated by `prep`.
 """
 
 import os
+import re
+import time
+
 import config
 
 REMOTE_TOOLS = [
@@ -20,9 +26,10 @@ REMOTE_TOOLS = [
         "name": "run_remote_command",
         "description": (
             "Run a command on the remote school EDA server via SSH. "
-            "Use this to execute Innovus, synthesis tools, or any other "
-            "EDA commands available only on the server. "
-            "Returns stdout, stderr, and exit code."
+            "Automatically loads EDA tools (Innovus, Design Compiler, etc.) "
+            "via `prep -l <COURSE>` before running your command, so you can "
+            "call `innovus`, `dc_shell`, `xrun`, etc. directly. "
+            "Returns prep output, command stdout/stderr, and exit code."
         ),
         "input_schema": {
             "type": "object",
@@ -31,7 +38,7 @@ REMOTE_TOOLS = [
                     "type": "string",
                     "description": (
                         "Shell command to run on the remote server. "
-                        "Example: 'innovus -batch -source /path/to/run.tcl'"
+                        "Example: 'cd ~/ic_agent && innovus -batch -source scripts/innovus_pnr.tcl'"
                     )
                 }
             },
@@ -100,8 +107,18 @@ def execute_remote_tool(tool_name: str, tool_input: dict) -> str:
     return f"ERROR: Unknown remote tool '{tool_name}'"
 
 
+# ── Internal helpers ──────────────────────────────────────────────────────────
+
 def _check_config() -> bool:
     return bool(getattr(config, "REMOTE_HOST", "") and getattr(config, "REMOTE_USER", ""))
+
+
+def _strip_ansi(text: str) -> str:
+    """Remove ANSI escape sequences and carriage returns from terminal output."""
+    ansi_escape = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
+    text = ansi_escape.sub("", text)
+    text = text.replace("\r\n", "\n").replace("\r", "\n")
+    return text
 
 
 def _get_ssh_client():
@@ -117,42 +134,105 @@ def _get_ssh_client():
     password = getattr(config, "REMOTE_PASSWORD", "")
 
     if key_path:
-        # SSH key authentication
         ssh.connect(
             hostname=config.REMOTE_HOST,
             username=config.REMOTE_USER,
             key_filename=os.path.expanduser(key_path),
-            timeout=30
+            timeout=30,
         )
     else:
-        # Password authentication (e.g. UCSD ieng6)
         ssh.connect(
             hostname=config.REMOTE_HOST,
             username=config.REMOTE_USER,
             password=password,
-            timeout=30
+            timeout=30,
         )
     return ssh
 
 
 def _run_remote_command(command: str) -> str:
+    """
+    Run *command* on the remote server inside an interactive PTY session.
+
+    Flow:
+      1. Open an interactive shell (PTY) — this triggers ~/.bashrc / login init.
+      2. Drain the MOTD / initial banner.
+      3. Run `prep -l <COURSE>` to load ACMS EDA modules (Innovus, etc.).
+      4. Run the user's command.
+      5. Echo a unique sentinel so we know when the command finishes.
+      6. Return cleaned-up output (ANSI stripped, exit code included).
+    """
+    prep_course = getattr(config, "REMOTE_PREP_COURSE", "ECE260B_WI26_A00")
+    ts = int(time.time())
+    prep_sentinel = f"__PREP_DONE_{ts}__"
+    cmd_sentinel  = f"__CMD_DONE_{ts}__"
+
+    try:
+        import paramiko
+    except ImportError:
+        return "ERROR: paramiko not installed. Run: pip install paramiko"
+
     try:
         ssh = _get_ssh_client()
-        stdin, stdout, stderr = ssh.exec_command(command, timeout=300)
-        out = stdout.read().decode("utf-8", errors="replace")
-        err = stderr.read().decode("utf-8", errors="replace")
-        exit_code = stdout.channel.recv_exit_status()
+        chan = ssh.invoke_shell(width=220, height=50)
+
+        # ── helper: accumulate output until sentinel or timeout ──────────────
+        def _wait_for(sentinel: str, timeout: int) -> str:
+            buf = ""
+            deadline = time.time() + timeout
+            while time.time() < deadline:
+                if chan.recv_ready():
+                    chunk = chan.recv(8192).decode("utf-8", errors="replace")
+                    buf += chunk
+                    if sentinel in buf:
+                        return buf
+                else:
+                    time.sleep(0.1)
+            return buf + f"\n[TIMEOUT after {timeout}s — sentinel not seen]"
+
+        # ── 1. Drain initial banner / MOTD ───────────────────────────────────
+        time.sleep(2)
+        while chan.recv_ready():
+            chan.recv(4096)
+
+        # ── 2. Load EDA tools via prep ───────────────────────────────────────
+        chan.send(f"prep -l {prep_course} 2>&1; echo '{prep_sentinel}'\n")
+        prep_raw = _wait_for(prep_sentinel, timeout=60)
+        prep_clean = _strip_ansi(prep_raw.split(prep_sentinel)[0]).strip()
+
+        # ── 3. Run user command; capture exit code; echo sentinel ────────────
+        chan.send(f"{command} 2>&1; echo \"EXIT_CODE:$?\"; echo '{cmd_sentinel}'\n")
+        cmd_raw = _wait_for(cmd_sentinel, timeout=300)
+
         ssh.close()
 
+        # ── 4. Parse output ──────────────────────────────────────────────────
+        if cmd_sentinel in cmd_raw:
+            cmd_body = _strip_ansi(cmd_raw.split(cmd_sentinel)[0]).strip()
+        else:
+            cmd_body = _strip_ansi(cmd_raw).strip() + "\n[WARNING: timed out]"
+
+        # Extract exit code line
+        exit_code_str = ""
+        lines = cmd_body.split("\n")
+        filtered = []
+        for line in lines:
+            if line.startswith("EXIT_CODE:"):
+                exit_code_str = line
+            else:
+                filtered.append(line)
+        cmd_body = "\n".join(filtered).strip()
+
         parts = []
-        if out:
-            parts.append(f"[stdout]\n{out.rstrip()}")
-        if err:
-            parts.append(f"[stderr]\n{err.rstrip()}")
-        parts.append(f"[exit code] {exit_code}")
-        return "\n".join(parts)
-    except Exception as e:
-        return f"ERROR (SSH): {e}"
+        if prep_clean:
+            parts.append(f"[prep -l {prep_course}]\n{prep_clean}")
+        parts.append(f"[command output]\n{cmd_body}")
+        if exit_code_str:
+            parts.append(f"[{exit_code_str}]")
+        return "\n\n".join(parts)
+
+    except Exception as exc:
+        return f"ERROR (SSH PTY): {exc}"
 
 
 def _upload_file(local_path: str, remote_path: str) -> str:
@@ -168,6 +248,7 @@ def _upload_file(local_path: str, remote_path: str) -> str:
         remote_dir = os.path.dirname(remote_path)
         try:
             ssh.exec_command(f"mkdir -p {remote_dir}")
+            time.sleep(0.5)
         except Exception:
             pass
 
@@ -175,8 +256,8 @@ def _upload_file(local_path: str, remote_path: str) -> str:
         sftp.close()
         ssh.close()
         return f"OK: Uploaded '{local_path}' → {remote_path}"
-    except Exception as e:
-        return f"ERROR (upload): {e}"
+    except Exception as exc:
+        return f"ERROR (upload): {exc}"
 
 
 def _download_file(remote_path: str, local_path: str) -> str:
@@ -190,5 +271,5 @@ def _download_file(remote_path: str, local_path: str) -> str:
         sftp.close()
         ssh.close()
         return f"OK: Downloaded {remote_path} → '{local_path}'"
-    except Exception as e:
-        return f"ERROR (download): {e}"
+    except Exception as exc:
+        return f"ERROR (download): {exc}"

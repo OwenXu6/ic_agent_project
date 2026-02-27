@@ -14,6 +14,7 @@ REMOTE_USER = "YOUR_USERNAME"         # your UCSD account (e.g. cs260xxx)
 REMOTE_PASSWORD = "YOUR_PASSWORD"     # leave empty if using SSH key
 REMOTE_KEY  = ""                      # path to SSH key, or leave empty for password auth
 REMOTE_WORK_DIR = "/home/linux/ieng6/YOUR_USERNAME/ic_agent"
+REMOTE_PREP_COURSE = "ECE260B_WI26_A00"  # course label passed to `prep -l <COURSE>` on ieng6
 
 # ── Claude model ─────────────────────────────────────────────────────────────
 MODEL = "claude-opus-4-6"
