@@ -1,122 +1,198 @@
-# 4-Bit Ripple Carry Adder
+# IC Design Automation AI Agent
 
-## 📖 项目简介
+An autonomous AI agent that drives a complete **RTL-to-GDSII** chip design flow — from Verilog RTL all the way through synthesis and physical place-and-route — without human intervention, powered by the **Claude API (Tool Use)**.
 
-本项目实现了一个 **4位波纹进位加法器（Ripple Carry Adder）**，采用结构化 Verilog 设计，由4个全加器（Full Adder）级联构成。进位信号从最低位（LSB）依次传播到最高位（MSB）。
+---
+
+## Overview
+
+This project implements an agentic loop using Anthropic's Claude API. The agent autonomously:
+1. Writes and modifies Verilog RTL designs
+2. Runs **Synopsys Design Compiler** synthesis on a remote EDA server
+3. Runs **Cadence Innovus 21** place-and-route (floorplan → power → placement → CTS → routing → signoff)
+4. Downloads and parses QoR reports (timing, power, area, DRC)
+5. Iteratively fixes errors in TCL scripts until the flow completes
+
+All EDA jobs run on **UCSD ieng6-ece-09** (ECE dedicated node) via SSH automation.
+
+---
+
+## Results
+
+### 4-bit Ripple Carry Adder — TSMC 65nm GP
+
+| Stage | Metric | Value |
+|-------|--------|-------|
+| DC Synthesis | WNS | **+0.21 ns** ✅ |
+| DC Synthesis | Cell Area | **48.6 µm²** |
+| DC Synthesis | Leakage Power | **193.6 nW** |
+| Innovus P&R | Post-route Slack | **+0.138 ns** ✅ |
+| Innovus P&R | DRC Violations | **0** ✅ |
+
+### 8-bit ALU — TSMC 65nm GP @ 200 MHz
+
+| Stage | Metric | Value |
+|-------|--------|-------|
+| DC Synthesis | WNS | **+1.81 ns** ✅ |
+| DC Synthesis | Cell Area | **331.6 µm²** |
+| DC Synthesis | Leakage Power | **573.7 nW** |
+| Innovus P&R | Timing Closure | **MET** ✅ |
+| Innovus P&R | DRC Violations | **0** ✅ |
+
+---
+
+## Architecture
 
 ```
-        ┌──────┐   ┌──────┐   ┌──────┐   ┌──────┐
- a[3]──►│  FA  │◄──│  FA  │◄──│  FA  │◄──│  FA  │◄── cin
- b[3]──►│  #3  │   │  #2  │   │  #1  │   │  #0  │
-        └──┬───┘   └──┬───┘   └──┬───┘   └──┬───┘
- cout◄─────┘          │          │          │
-        sum[3]     sum[2]     sum[1]     sum[0]
+User Prompt
+    │
+    ▼
+agent.py  ──── Claude claude-opus-4-6 (streaming + tool_use)
+    │                   │
+    │         selects tool ──► tools/__init__.py (dispatcher)
+    │
+    ├── write_file / read_file / list_files   (local file I/O)
+    ├── run_local_command                     (iverilog, git, etc.)
+    ├── sync_to_remote                        (one-shot project upload via SFTP)
+    ├── run_remote_command                    (SSH → EDA server)
+    └── upload_to_remote / download_from_remote
+    │
+    ▼
+ieng6-ece-09.ucsd.edu  (Synopsys DC + Cadence Innovus 21.1)
 ```
 
-## 📁 项目结构
+### Key Design Decisions
+
+| Problem | Solution |
+|---------|----------|
+| SSH non-login shell can't `module load` EDA tools | Write commands as `bash --login` temp scripts |
+| Claude API 30k token/min rate limit | Exponential-backoff retry (up to 6 attempts) |
+| DC `compile_ultra` takes 10+ min | Configurable `timeout` param on `_run_remote_command` |
+| Innovus 21 API breaks (e.g., `create_floorplan` → wrong command) | Iterative TCL debugging; use EDI-compatible commands (`floorPlan`, `routeDesign`, `ccopt_design`) |
+
+---
+
+## Full ASIC Flow (Automated)
 
 ```
-.
+RTL (Verilog)
+  └─► DC Synthesis (dc_shell)
+        ├── Library setup (TSMC 65nm GP .db files)
+        ├── compile_ultra -no_autoungroup
+        └── Gate-level netlist + SDC
+              └─► Innovus 21 P&R
+                    ├── MMMC setup (init_mmmc_file)
+                    ├── init_design
+                    ├── floorPlan -site core
+                    ├── Power planning (globalNetConnect, addRing, addStripe, sroute)
+                    ├── place_design
+                    ├── CTS (ccopt_design)        ← sequential designs only
+                    ├── routeDesign
+                    ├── optDesign -postRoute
+                    ├── verify_drc / verify_connectivity
+                    └── defOut / saveNetlist
+```
+
+---
+
+## Project Structure
+
+```
+ic_agent/
+├── agent.py                          # Main agentic loop
+├── config.py                         # SSH credentials, model settings
+├── tools/
+│   ├── __init__.py                   # Tool dispatcher
+│   ├── file_tools.py                 # write_file, read_file, list_files
+│   ├── command_tools.py              # run_local_command
+│   └── remote_tools.py              # SSH tools (run, upload, download, sync)
 ├── designs/
-│   ├── full_adder.v                    # 1位全加器模块
-│   └── ripple_carry_adder_4bit.v       # 4位波纹进位加法器（顶层）
-├── tb/
-│   └── ripple_carry_adder_4bit_tb.v    # 完整自检测试平台
+│   ├── full_adder.v
+│   ├── ripple_carry_adder_4bit.v
+│   ├── ripple_carry_adder_4bit_synth.v   # Gate-level netlist (DC output)
+│   ├── alu_8bit.v
+│   └── alu_8bit_synth.v
 ├── scripts/
-│   ├── constraints.sdc                 # SDC 时序约束文件
-│   └── innovus_pnr.tcl                 # Innovus 布局布线 TCL 脚本（模板）
-├── results/                            # 仿真与P&R输出目录
-└── README.md                           # 本文件
+│   ├── dc_synthesis.tcl              # Synopsys DC (4-bit adder)
+│   ├── dc_synthesis_alu.tcl          # Synopsys DC (8-bit ALU)
+│   ├── innovus_pnr.tcl               # Cadence Innovus P&R (4-bit adder)
+│   ├── innovus_pnr_alu.tcl           # Cadence Innovus P&R (8-bit ALU)
+│   ├── constraints.sdc
+│   ├── constraints_alu.sdc
+│   └── constraints_*_synth.sdc
+├── results/
+│   ├── synth/                        # 4-bit adder synthesis reports
+│   ├── synth_alu/                    # 8-bit ALU synthesis reports
+│   ├── innovus/                      # 4-bit adder P&R results + DEF
+│   └── innovus_alu/                  # 8-bit ALU P&R results + DEF
+└── tb/
+    ├── ripple_carry_adder_4bit_tb.v
+    └── alu_8bit_tb.v
 ```
 
-## 🔧 设计规格
+---
 
-| 参数         | 值                          |
-|-------------|----------------------------|
-| 位宽         | 4-bit                      |
-| 架构         | 波纹进位（Ripple Carry）     |
-| 输入端口     | `a[3:0]`, `b[3:0]`, `cin`  |
-| 输出端口     | `sum[3:0]`, `cout`         |
-| 全加器数量   | 4                          |
-| 关键路径     | cin → FA0 → FA1 → FA2 → FA3 → cout |
-| 可综合       | ✅ 是                       |
-| 时钟         | 无（纯组合逻辑）             |
+## Setup
 
-## 🧪 仿真方法
-
-### 使用 Icarus Verilog 进行功能仿真
+### Requirements
 
 ```bash
-# 1. 编译设计和测试平台
-iverilog -o results/ripple_carry_adder_4bit_sim \
-    designs/full_adder.v \
-    designs/ripple_carry_adder_4bit.v \
-    tb/ripple_carry_adder_4bit_tb.v
-
-# 2. 运行仿真
-vvp results/ripple_carry_adder_4bit_sim
-
-# 3. 查看波形（可选）
-gtkwave results/ripple_carry_adder_4bit.vcd
+pip install anthropic paramiko
 ```
 
-### 测试覆盖范围
+### Configuration
 
-测试平台包含两个阶段：
-- **Phase 1**: 11 个精选角落用例（corner cases）
-  - 全零输入、全一输入
-  - 最大进位传播链（如 `0111 + 0001`、`1111 + 0001`）
-  - 交替位模式（`1010 + 0101`）
-  - 溢出场景
-- **Phase 2**: 全部 512 种输入组合的穷举测试
-  - 遍历 `a[3:0]` × `b[3:0]` × `cin` 的所有可能
+Edit `config.py`:
 
-### 预期输出
-
-```
-==========================================================
-  4-bit Ripple Carry Adder - Testbench
-==========================================================
-
---- Phase 1: Corner Cases ---
-  Corner cases completed: 11 passed, 0 failed
-
---- Phase 2: Exhaustive Test (512 combinations) ---
-  Exhaustive test completed: 512 passed, 0 failed
-
-==========================================================
-  *** ALL TESTS PASSED *** (512 / 512)
-==========================================================
+```python
+REMOTE_HOST      = "your-eda-server.edu"
+REMOTE_USER      = "your_username"
+REMOTE_PASSWORD  = "your_password"       # or use REMOTE_KEY for SSH key auth
+REMOTE_WORK_DIR  = "/path/to/remote/ic_agent"
+REMOTE_PREP_COURSE = "ECE260B_WI26_A00" # ACMS module group for EDA tools
+MODEL            = "claude-opus-4-6"
+MAX_AGENT_TURNS  = 80
 ```
 
-## 🏭 布局布线 (Place & Route)
-
-### 使用 Innovus 进行 P&R
+### Run
 
 ```bash
-# 前提：需要先用综合工具（如 Genus/Design Compiler）生成门级网表
-# 然后运行 Innovus：
-innovus -batch -source scripts/innovus_pnr.tcl
+cd "ic agent"
+python3 agent.py
 ```
 
-### P&R 流程步骤
+The agent will prompt for a task description, then autonomously execute the full design flow.
 
-| 步骤 | 描述                           |
-|------|-------------------------------|
-| 1    | 读取设计数据（LEF/LIB/Netlist）|
-| 2    | 建立 Floorplan（70% 利用率）   |
-| 3    | 电源规划（Power Rings/Stripes）|
-| 4    | 标准单元布局（Placement）       |
-| 5    | 时钟树综合（组合逻辑跳过）      |
-| 6    | 布线（Global + Detail Route）  |
-| 7    | 时序优化（Post-Route Opt）     |
-| 8    | 签核检查（DRC/Connectivity）   |
-| 9    | 导出结果（GDS/DEF/SDF/SPEF）  |
+---
 
-> ⚠️ 注意：`scripts/innovus_pnr.tcl` 为模板脚本，需根据实际 PDK 修改库文件路径。
+## Technology Stack
 
-## 📝 备注
+| Layer | Technology |
+|-------|-----------|
+| LLM | Anthropic Claude claude-opus-4-6 (streaming, tool use) |
+| Synthesis | Synopsys Design Compiler 2015.06 |
+| P&R | Cadence Innovus 21.10-p004_1 |
+| PDK | TSMC 65nm GP (`tcbn65gplus` HVT/LVT, 8-layer metal) |
+| SSH | Python `paramiko` — `bash --login` temp-script injection |
+| Language | Python 3.9+ |
 
-- 仿真工具 `iverilog` 暂未在当前环境安装，仿真步骤暂时跳过
-- Innovus P&R 脚本作为模板保留，暂不执行
-- 设计采用 `generate` 语句实现参数化结构，便于扩展到 N 位
+---
+
+## 中文说明
+
+本项目是一个基于 **Claude API（Tool Use）** 的 AI Agent，能够自动完成从 RTL 到 GDSII 的完整芯片设计流程，无需人工干预。
+
+Agent 通过 7 个自定义工具，自主完成以下任务：
+- 编写/修改 Verilog RTL 设计
+- 在远程 EDA 服务器（UCSD ieng6-ece-09）上运行 Synopsys DC 综合
+- 运行 Cadence Innovus 21 物理布局布线（布图规划 → 电源规划 → 布局 → CTS → 布线 → 签核）
+- 下载并解析 QoR 报告（时序/功耗/面积/DRC）
+- 自动迭代修复 TCL 脚本错误
+
+**最终成果**：在 TSMC 65nm GP 工艺下完成两个设计的完整 RTL-to-GDSII 流程：
+- 4-bit 波纹进位加法器：WNS +0.21 ns，面积 48.6 µm²，DRC violations = 0
+- 8-bit ALU @ 200 MHz：WNS +1.81 ns，面积 331.6 µm²，DRC violations = 0
+
+---
+
+*Built with [Claude Code](https://claude.ai/claude-code)*

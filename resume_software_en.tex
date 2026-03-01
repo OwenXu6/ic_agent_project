@@ -1,0 +1,165 @@
+\documentclass[10pt, letterpaper]{article}
+
+%--- Packages ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{tabularx}
+
+%--- Page Layout ---
+\geometry{letterpaper, left=0.5in, right=0.5in, top=0.4in, bottom=0.4in}
+\pagestyle{empty}
+
+%--- Colors & Links ---
+\definecolor{linkcolor}{rgb}{0.0, 0.0, 0.8}
+\definecolor{sectioncolor}{rgb}{0.2, 0.2, 0.2}
+\hypersetup{
+    colorlinks=true,
+    urlcolor=linkcolor,
+    linkcolor=linkcolor,
+    pdftitle={Wenpeng Xu Resume},
+    pdfauthor={Wenpeng Xu},
+}
+
+%--- Section Title Command ---
+\newcommand{\sectiontitle}[1]{%
+  \vspace{2pt}
+  {\color{sectioncolor}\Large\bfseries #1}
+  \vspace{-5pt}
+  \rule{\linewidth}{0.6pt}
+  \vspace{1pt}
+}
+
+%--- List Spacing ---
+\setlist[itemize]{topsep=0pt, partopsep=0pt, parsep=0pt, itemsep=0.5pt, leftmargin=*}
+
+% =========================================================
+\begin{document}
+% =========================================================
+
+%--- Header ---
+\begin{center}
+  {\huge \textbf{Wenpeng Xu}}
+  \vspace{2pt}
+
+  (858) 241-4024 \quad$\cdot$\quad
+  \href{mailto:wex019@ucsd.edu}{wex019@ucsd.edu} \quad$\cdot$\quad
+  \href{https://www.linkedin.com/in/wenpeng-xu-725786387}{linkedin.com/in/wenpeng-xu} \quad$\cdot$\quad
+  \href{https://github.com/OwenXu6}{github.com/OwenXu6}
+\end{center}
+
+\vspace{-6pt}
+
+% ---------------------------------------------------------
+\sectiontitle{Education}
+% ---------------------------------------------------------
+
+\textbf{University of California, San Diego (UCSD)} \hfill San Diego, CA \\
+\textit{M.S. in Computer Engineering, Specialization: AI \& Hardware Design} \hfill Sep 2025 -- Present
+\vspace{1pt}
+
+\textbf{Tongji University} \hfill Shanghai, China \\
+\textit{B.E. in Software Engineering} \hfill Sep 2020 -- Jun 2025 \\
+\textit{GPA: 3.80 / 4.0}
+
+% ---------------------------------------------------------
+\vspace{-2pt}
+\sectiontitle{Skills}
+% ---------------------------------------------------------
+
+\begin{itemize}
+  \item \textbf{Hardware Design}: Verilog, FPGA, ASIC Flow, ModelSim, VCS, DC Synthesis,
+        Cadence Innovus P\&R, TSMC 65nm PDK
+  \item \textbf{AI \& Algorithms}: PyTorch (QAT), Transformer, LLM API (Tool Use / Agentic Loop),
+        Signal Processing (STFT/FFT), Unsupervised Learning
+  \item \textbf{Programming Languages}: Python, C++, Java, C\#, Assembly, SQL
+  \item \textbf{Core Concepts}: HW-SW Co-design, SIMD Architecture, Low-Power Design (Clock Gating),
+        Memory Optimization, Distributed Caching, SSH Automation
+\end{itemize}
+
+% ---------------------------------------------------------
+\vspace{-2pt}
+\sectiontitle{Experience}
+% ---------------------------------------------------------
+
+\textbf{China Resources Digital Technology} \hfill Shenzhen, China \\
+\textit{AI Engineer Intern --- Industrial IoT \& Signal Processing} \hfill Sep 2024 -- Dec 2024
+\begin{itemize}
+  \item Developed an \textbf{unsupervised anomaly detection system} for industrial machinery
+        (cement manufacturing equipment), leveraging vibration sensor data to predict equipment failures.
+  \item Applied \textbf{Short-Time Fourier Transform (STFT)} and power spectral analysis on large-scale
+        time-series data, converting raw 1-D signals into spectral feature maps for deep learning.
+  \item Built a \textbf{Transformer-based autoencoder} pipeline that captures long-range temporal
+        dependencies in sensor logs, improving detection accuracy by \textbf{15\%} over traditional
+        autoencoders.
+  \item Benchmarked semi-supervised approaches (KNN, OCSVM) to enable adaptation to novel anomaly
+        patterns with minimal human annotation.
+\end{itemize}
+
+\vspace{3pt}
+
+\textbf{Alibaba Cloud} \hfill Beijing, China \\
+\textit{Software Development Engineer Intern} \hfill Jun 2025 -- Aug 2025
+\begin{itemize}
+  \item Designed a \textbf{Redis-based caching layer} for a large-scale management platform to optimize
+        core search functionality.
+  \item Implemented a hybrid cache eviction strategy (proactive + TTL-based deletion) to ensure data
+        consistency under strict memory constraints, eliminating cache penetration and stale-read risks.
+  \item Reduced database I/O latency and achieved a \textbf{60\% improvement} in search operation
+        throughput, significantly lowering P99 latency under high concurrency.
+\end{itemize}
+
+% ---------------------------------------------------------
+\vspace{-2pt}
+\sectiontitle{Projects}
+% ---------------------------------------------------------
+
+\textbf{IC Design Automation AI Agent} \hfill Jan 2026 -- Mar 2026
+\begin{itemize}
+  \item Built a multi-step \textbf{autonomous AI Agent} using \textbf{Claude API (Streaming + Tool Use)}
+        that drives a complete chip design flow (RTL $\rightarrow$ EDA Synthesis $\rightarrow$ Physical
+        P\&R) end-to-end without human intervention.
+  \item Designed \textbf{7 modular tools} (file I/O, local/SSH remote execution, one-shot project sync)
+        and a \textbf{ReAct-style loop} enabling the agent to autonomously invoke tools, parse outputs,
+        and iteratively fix errors.
+  \item Implemented exponential-backoff \textbf{rate-limit retry} and a configurable-timeout SSH
+        execution engine (Python + Paramiko), achieving 100\% task success rate for 10+ minute jobs.
+  \item Successfully taped out two TSMC 65nm GP designs --- 4-bit adder and 8-bit ALU @ 200\,MHz ---
+        with timing closure (WNS $>$ 0) and zero DRC violations.
+\end{itemize}
+
+\vspace{3pt}
+
+\textbf{High-Efficiency Reconfigurable AI Accelerator Based on VGG16}
+\hfill Oct 2025 -- Dec 2025 \\
+{\small\textit{Top Performer / High Distinction --- ECE 284 Parallel Processing, UCSD}}
+\begin{itemize}
+  \item Designed a deep learning edge accelerator in \textbf{Verilog} supporting \textbf{SIMD} and
+        reconfigurable architecture for mixed-precision (2-bit/4-bit) inference.
+  \item Performed \textbf{HW-SW co-design}: applied \textbf{Quantization-Aware Training (QAT)} to
+        VGG16 in PyTorch to minimize accuracy loss, then verified hardware logic against the
+        software Golden Model.
+  \item Integrated \textbf{Clock Gating} and weight-fusion techniques to reduce dynamic power and
+        maximize memory bandwidth utilization, improving overall Performance/Watt.
+  \item Achieved \textbf{100\% functional verification coverage} via ModelSim/VCS automated testbenches
+        and completed synthesis with optimal PPA trade-offs.
+\end{itemize}
+
+\vspace{3pt}
+
+\textbf{Multi-task Transformer for Joint Accent \& Gender Classification}
+\hfill Jul 2023 -- Aug 2023 \\
+{\small\textit{Published --- EI International Conference}}
+\begin{itemize}
+  \item Developed a \textbf{multi-task Transformer} model for joint classification of speaker accent
+        and gender from audio recordings.
+  \item Leveraged \textbf{Wav2Vec} embeddings combined with \textbf{CTC Loss} and cross-entropy to
+        enable efficient multi-objective optimization in a shared encoder framework.
+  \item Preprocessed and curated \textbf{2,484+ hours} of audio data from the Common Voice dataset
+        for large-scale model training and evaluation.
+\end{itemize}
+
+\end{document}
